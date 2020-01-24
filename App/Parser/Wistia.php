@@ -1,36 +1,33 @@
 <?php
-/**
- * Wistia.net functions
- */
 
-namespace App\Http;
+namespace App\Parser;
 
+use App\Exceptions\NoDownloadLinkException;
 use App\Exceptions\NoWistiaIDException;
 use App\Utils\Utils;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use Ubench;
 
-/**
- * Class Wistia
- * @package App\Http
- */
 class Wistia
 {
     /**
      * Guzzle client
+     *
      * @var Client
      */
     private $client;
 
     /**
      * Guzzle cookie
+     *
      * @var CookieJar
      */
     private $cookie;
 
     /**
      * Ubench lib
+     *
      * @var Ubench
      */
     private $bench;
@@ -58,6 +55,7 @@ class Wistia
         $this->bench = $bench;
         $this->html = $html;
     }
+
     /**
      * Get wistia.net video url
      */
@@ -65,34 +63,37 @@ class Wistia
     {
         try {
             $this->getWistiaID();
-        } catch(NoWistiaIDException $e) {
+        } catch (NoWistiaIDException $e) {
             Utils::write(sprintf("Can't find any wistia.net ID! :("));
             return false;
         }
-        
-        $response =  $this->client->post('check.php', [
+
+        $response = $this->client->post('check.php', [
             'cookies' => $this->cookie,
-            'body'    => [
-                'mediaurl'    => 'http://fast.wistia.net/embed/iframe/'.$this->wistiaID
+            'body' => [
+                'mediaurl' => 'http://fast.wistia.net/embed/iframe/' . $this->wistiaID,
             ],
-            'verify' => false
+            'verify' => false,
         ]);
 
         $html = $response->getBody()->getContents();
 
-        $data = json_decode($html,true);
+        $data = json_decode($html, true);
 
-        if(!isset($data['url']))
-            return false;
+        if (!isset($data['url'])) {
+            throw new NoDownloadLinkException('Failed to find wistia video URL');
+        }
 
         $finalUrl = '';
         $maxSize = 0;
-        foreach($data['url'] as $url) {
-            if($url['size'] > $maxSize) {
+
+        foreach ($data['url'] as $url) {
+            if ($url['size'] > $maxSize) {
                 $maxSize = $url['size'];
                 $finalUrl = $url['url'];
             }
         }
+
         Utils::writeln(sprintf("Found video URL %s ",
             $finalUrl
         ));
@@ -103,15 +104,15 @@ class Wistia
     /**
      * Get wistia.net video id
      */
-    protected function getWistiaID() {
-        if(preg_match('~wistia_async_([a-z0-9]+)\s~',$this->html,$match)) {
+    protected function getWistiaID()
+    {
+        if (preg_match('~wistia_async_([a-z0-9]+)\s~', $this->html, $match)) {
             $this->wistiaID = trim($match[1]);
 
             Utils::writeln(sprintf("Found Wistia.net ID %s ",
                 $this->wistiaID
             ));
-        }
-        else {
+        } else {
             return false;
         }
     }

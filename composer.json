@@ -3,6 +3,7 @@
   "description": "PHP library to download laracasts lessons",
   "license": "MIT",
   "require": {
+    "php": "^7.0",
     "guzzlehttp/guzzle": "~5.2",
     "league/flysystem": "~1.0",
     "symfony/dom-crawler": "~2.6",

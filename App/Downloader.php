@@ -4,16 +4,16 @@
  */
 namespace App;
 
+use AlgoliaSearch\Client as AlgoliaClient;
+use App\Algolia\Controller as AlgoliaController;
 use App\Exceptions\LoginException;
 use App\Exceptions\SubscriptionNotActiveException;
 use App\Http\Resolver;
+use App\Laracasts\Controller as LaracastsController;
 use App\System\Controller as SystemController;
 use App\Utils\Utils;
 use Cocur\Slugify\Slugify;
 use GuzzleHttp\Client as HttpClient;
-use AlgoliaSearch\Client as AlgoliaClient;
-use App\Algolia\Controller as AlgoliaController;
-use App\Laracasts\Controller as LaracastsController;
 use League\Flysystem\Filesystem;
 use Ubench;
 

@@ -10,6 +10,10 @@ use App\Exceptions\EpisodePageNotFoundException;
 use App\Exceptions\NoDownloadLinkException;
 use App\Exceptions\SubscriptionNotActiveException;
 use App\Html\Parser;
+use App\Parser\LaracastsDownload;
+use App\Parser\ParserInterface;
+use App\Parser\Vimeo;
+use App\Parser\Wistia;
 use App\Utils\Utils;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
@@ -22,6 +26,12 @@ use Ubench;
  */
 class Resolver
 {
+    const DOWNLOAD_PARSERS = [
+        Vimeo::class,
+        LaracastsDownload::class,
+        Wistia::class,
+    ];
+
     /**
      * Guzzle client
      * @var Client
@@ -150,6 +160,7 @@ class Resolver
         Utils::writeln(sprintf("Download started: %s . . . . Saving on " . LESSONS_FOLDER . ' folder.',
             $lesson
         ));
+
         $html = $this->getPage($path);
         return $this->downloadLessonFromPath($html, $saveTo);
     }
@@ -173,23 +184,6 @@ class Resolver
         return $response->getBody()->getContents();
     }
 
-    /**
-     * Helper to get the Location header.
-     *
-     * @param $url
-     *
-     * @return string
-     */
-    private function getRedirectUrl($url)
-    {
-        $response = $this->client->get($url, [
-            'cookies'         => $this->cookie,
-            'allow_redirects' => FALSE,
-            'verify' => false
-        ]);
-
-        return $response->getHeader('Location');
-    }
 
     /**
      * Gets the name of the serie episode.
@@ -222,20 +216,10 @@ class Resolver
         }
 
         try {
-            $downloadUrl = Parser::getDownloadLink($html);
-            $viemoUrl = $this->getRedirectUrl($downloadUrl);
-            $finalUrl = $this->getRedirectUrl($viemoUrl);
+            $finalUrl = $this->getDownloadUrlForLesson($html);
         } catch(NoDownloadLinkException $e) {
             Utils::write(sprintf("Can't download this lesson! :( No download button"));
-
-            try {
-                Utils::write(sprintf("Tring to find a Wistia.net video"));
-                $Wistia = new Wistia($html,$this->bench);
-                $finalUrl = $Wistia->getDownloadUrl();
-            } catch(NoDownloadLinkException $e) {
-                return false;
-            }
-
+            return false;
         }
 
         $this->bench->start();
@@ -287,5 +271,29 @@ class Resolver
         ));
 
         return true;
+    }
+
+    private function getDownloadUrlForLesson($html)
+    {
+        foreach (self::DOWNLOAD_PARSERS as $parserClass)
+        {
+            /** @var ParserInterface $parser */
+            $parser = new $parserClass($html, $this->bench);
+            $parserName = (new \ReflectionClass($parser))->getShortName();
+
+            Utils::writeln(sprintf('Attempting to parse video url using %s parser', $parserName));
+
+            try {
+                return $parser->getDownloadUrl();
+            } catch (\Exception $e) {
+                Utils::writeln(sprintf('Failed to parse video url using %s parser', $parserName));
+
+                continue;
+            }
+        }
+
+        throw new NoDownloadLinkException(
+            sprintf('Download link not found, tried %d parsers', count(self::DOWNLOAD_PARSERS))
+        );
     }
 }
