@@ -36,7 +36,7 @@ class Vimeo
 
         $vimeoPage = $this->client->get(sprintf('https://player.vimeo.com/video/%s', $vimeoId), [
             'headers' => [
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3533.1 Safari/537.36',
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36',
                 'Referer' => 'https://laracasts.com/series/build-a-laravel-app-with-tdd/episodes/1',
             ],
         ]);
